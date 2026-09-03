@@ -1,0 +1,24 @@
+[project]
+name = "streamlit-mcp-client"
+version = "0.1.0"
+description = "Streamlit MCP Client UI powered by LangGraph, langchain-mcp-adapters, and OpenAI"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.38.0",
+    "langgraph>=0.2.0",
+    "langchain-mcp-adapters>=0.1.0",
+    "langchain-openai>=0.2.0",
+    "langchain-core>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.7.0",
+    "httpx>=0.27.0",
+    "mcp>=1.1.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
