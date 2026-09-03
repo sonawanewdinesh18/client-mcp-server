@@ -12,13 +12,54 @@ ENV_PATH = BASE_DIR / ".env"
 SERVERS_CONFIG_PATH = BASE_DIR / "mcp_servers.json"
 
 AVAILABLE_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4-turbo",
-    "gpt-3.5-turbo",
-    "o1-mini",
-    "o3-mini",
+    "[Groq] llama-3.3-70b-versatile",
+    "[Groq] llama-3.1-8b-instant",
+    "[Groq] mixtral-8x7b-32768",
+    "[OpenAI] gpt-4o",
+    "[OpenAI] gpt-4o-mini",
+    "[OpenAI] gpt-4-turbo",
+    "[OpenAI] o1-mini",
+    "[OpenAI] o3-mini",
 ]
+
+def get_groq_api_key() -> Optional[str]:
+    """
+    Retrieve Groq API Key dynamically from:
+    1. Local .env file (real-time reload)
+    2. OS Environment Variables
+    3. Streamlit Cloud Secrets (st.secrets)
+    """
+    if ENV_PATH.exists():
+        try:
+            from dotenv import dotenv_values
+            env_vars = dotenv_values(ENV_PATH)
+            if env_vars.get("GROQ_API_KEY"):
+                val = env_vars["GROQ_API_KEY"]
+                if val and val.strip():
+                    return val.strip()
+        except Exception:
+            pass
+
+    try:
+        load_dotenv(dotenv_path=ENV_PATH, override=True)
+    except Exception:
+        pass
+
+    key = os.getenv("GROQ_API_KEY")
+    if key and key.strip():
+        return key.strip()
+
+    try:
+        import streamlit as st
+        if "GROQ_API_KEY" in st.secrets:
+            secret_key = st.secrets["GROQ_API_KEY"]
+            if secret_key and secret_key.strip():
+                return secret_key.strip()
+    except Exception:
+        pass
+
+    return None
+
 
 def get_openai_api_key() -> Optional[str]:
     """
@@ -27,7 +68,6 @@ def get_openai_api_key() -> Optional[str]:
     2. OS Environment Variables
     3. Streamlit Cloud Secrets (st.secrets)
     """
-    # 1. Check local .env file directly
     if ENV_PATH.exists():
         try:
             from dotenv import dotenv_values
@@ -39,7 +79,6 @@ def get_openai_api_key() -> Optional[str]:
         except Exception:
             pass
 
-    # 2. Reload into os.environ with override
     try:
         load_dotenv(dotenv_path=ENV_PATH, override=True)
     except Exception:
@@ -49,7 +88,6 @@ def get_openai_api_key() -> Optional[str]:
     if key and key.strip():
         return key.strip()
 
-    # 3. Try Streamlit Secrets fallback (for Cloud deployment)
     try:
         import streamlit as st
         if "OPENAI_API_KEY" in st.secrets:
@@ -60,6 +98,7 @@ def get_openai_api_key() -> Optional[str]:
         pass
 
     return None
+
 
 
 

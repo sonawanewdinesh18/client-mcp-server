@@ -17,13 +17,22 @@ class TestMCPClient(unittest.TestCase):
         self.assertIn("mcpServers", cfg)
 
     def test_agent_creation(self):
-        agent = create_mcp_agent(
-            openai_api_key="sk-dummy-test-key",
-            model_name="gpt-4o-mini",
+        agent_openai = create_mcp_agent(
+            api_key="sk-dummy-test-key",
+            model_name="[OpenAI] gpt-4o-mini",
             temperature=0.0,
             tools=[sample_adder]
         )
-        self.assertIsNotNone(agent)
+        self.assertIsNotNone(agent_openai)
+
+        agent_groq = create_mcp_agent(
+            api_key="gsk_dummy_test_key",
+            model_name="[Groq] llama-3.3-70b-versatile",
+            temperature=0.0,
+            tools=[sample_adder]
+        )
+        self.assertIsNotNone(agent_groq)
+
 
     def test_mcp_manager_empty(self):
         manager = MCPManager({})

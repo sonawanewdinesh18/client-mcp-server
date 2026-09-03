@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional, AsyncIterator
 import warnings
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import BaseMessage, AIMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
@@ -19,19 +20,30 @@ Be concise, clear, and accurate.
 """
 
 def create_mcp_agent(
-    openai_api_key: str,
-    model_name: str = "gpt-4o",
+    api_key: str,
+    model_name: str = "llama-3.3-70b-versatile",
     temperature: float = 0.2,
     tools: Optional[List[BaseTool]] = None,
     system_prompt: Optional[str] = None,
 ) -> CompiledStateGraph:
-    """Creates a LangGraph ReAct agent bound with ChatOpenAI and provided MCP tools."""
-    llm = ChatOpenAI(
-        model=model_name,
-        temperature=temperature,
-        api_key=openai_api_key,
-        streaming=True
-    )
+    """Creates a LangGraph ReAct agent bound with ChatGroq or ChatOpenAI and provided MCP tools."""
+    clean_model = model_name.replace("[Groq] ", "").replace("[OpenAI] ", "").strip()
+    is_groq = "[Groq]" in model_name or "llama" in model_name.lower() or "mixtral" in model_name.lower() or "gemma" in model_name.lower()
+
+    if is_groq:
+        llm = ChatGroq(
+            model=clean_model,
+            temperature=temperature,
+            api_key=api_key,
+            streaming=True
+        )
+    else:
+        llm = ChatOpenAI(
+            model=clean_model,
+            temperature=temperature,
+            api_key=api_key,
+            streaming=True
+        )
     
     prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
     tools_list = tools or []
@@ -42,6 +54,7 @@ def create_mcp_agent(
         prompt=prompt
     )
     return agent
+
 
 
 async def run_agent_stream_async(

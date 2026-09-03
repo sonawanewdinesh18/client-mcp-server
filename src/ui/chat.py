@@ -2,7 +2,7 @@ import json
 import streamlit as st
 from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
-from src.config import AVAILABLE_MODELS, get_openai_api_key
+from src.config import AVAILABLE_MODELS, get_openai_api_key, get_groq_api_key
 from src.agent import create_mcp_agent, run_agent_stream_async
 from src.mcp_manager import MCPManager
 
@@ -47,7 +47,7 @@ def render_chat_interface(mcp_manager: MCPManager):
             options=AVAILABLE_MODELS,
             index=0,
             label_visibility="collapsed",
-            help="Switch OpenAI model"
+            help="Switch Model Provider (Groq / OpenAI)"
         )
     with col_clear:
         if st.button("🗑️ Clear", help="Clear conversation history", use_container_width=True):
@@ -76,11 +76,19 @@ def render_chat_interface(mcp_manager: MCPManager):
     user_prompt = st.chat_input("Ask a question or request a task using your MCP tools...")
 
     if user_prompt:
-        # Check for OpenAI API Key from .env / environment
-        api_key = get_openai_api_key()
-        if not api_key:
-            st.error("❌ **OpenAI API Key is missing!** Please add your `OPENAI_API_KEY` to the `.env` file in your project directory.")
-            return
+        is_groq = "[Groq]" in selected_model
+        
+        # Check corresponding API Key from .env / environment
+        if is_groq:
+            api_key = get_groq_api_key()
+            if not api_key:
+                st.error("❌ **Groq API Key is missing!** Please add `GROQ_API_KEY=gsk_...` to your `.env` or Streamlit Cloud Secrets. (Get a free key at [console.groq.com/keys](https://console.groq.com/keys)).")
+                return
+        else:
+            api_key = get_openai_api_key()
+            if not api_key:
+                st.error("❌ **OpenAI API Key is missing!** Please add `OPENAI_API_KEY=sk-...` to your `.env` or Streamlit Cloud Secrets.")
+                return
 
         # Display and record user message
         st.session_state["messages"].append({"role": "user", "content": user_prompt})
@@ -102,11 +110,12 @@ def render_chat_interface(mcp_manager: MCPManager):
 
             # Create agent
             agent = create_mcp_agent(
-                openai_api_key=api_key,
+                api_key=api_key,
                 model_name=selected_model,
                 temperature=0.2,
                 tools=tools
             )
+
 
             # Build message history for LangGraph
 
