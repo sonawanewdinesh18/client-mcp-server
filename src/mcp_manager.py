@@ -65,13 +65,38 @@ class MCPManager:
         """Fetch all tools from configured and enabled MCP servers asynchronously."""
         if not self.client:
             return []
-        try:
-            tools = await self.client.get_tools()
-            self._cached_tools = tools
-            return tools
-        except Exception as e:
-            print(f"Error fetching MCP tools: {e}")
-            raise e
+        
+        all_tools: List[BaseTool] = []
+        errors: List[str] = []
+
+        for name, config in self.server_configs.items():
+            if not config.get("enabled", True):
+                continue
+            try:
+                tools = await self.client.get_tools(server_name=name)
+                all_tools.extend(tools)
+            except Exception as e:
+                err_str = str(e)
+                # Unwrap ExceptionGroup if present
+                if hasattr(e, "exceptions") and getattr(e, "exceptions", None):
+                    sub_errs = [str(sub) for sub in getattr(e, "exceptions")]
+                    err_str = " | ".join(sub_errs)
+                
+                if "401" in err_str or "unauthorized" in err_str.lower():
+                    clean_err = f"'{name}': HTTP 401 Unauthorized (Server requires Authorization headers / API Token)"
+                elif "404" in err_str:
+                    clean_err = f"'{name}': HTTP 404 Not Found (Check if the SSE URL path is correct, e.g. /sse or /mcp)"
+                else:
+                    clean_err = f"'{name}': {err_str}"
+                
+                errors.append(clean_err)
+
+        self._cached_tools = all_tools
+
+        if errors and not all_tools:
+            raise RuntimeError("\n".join(errors))
+
+        return all_tools
 
     def fetch_tools(self) -> List[BaseTool]:
         """Synchronous wrapper to fetch tools for Streamlit runtime."""
@@ -122,7 +147,16 @@ class MCPManager:
                 })
             return True, f"Successfully connected! Found {len(tools)} tool(s).", tool_meta
         except Exception as e:
-            return False, f"Connection error: {str(e)}", []
+            err_str = str(e)
+            if hasattr(e, "exceptions") and getattr(e, "exceptions", None):
+                err_str = " | ".join(str(sub) for sub in getattr(e, "exceptions"))
+            
+            if "401" in err_str or "unauthorized" in err_str.lower():
+                return False, "HTTP 401 Unauthorized: Server requires Authorization headers or an API token.", []
+            elif "404" in err_str:
+                return False, "HTTP 404 Not Found: Check if URL path is correct (e.g., /sse or /mcp).", []
+            return False, f"Connection error: {err_str}", []
+
 
     def test_server_connection(self, name: str, config: Dict[str, Any]) -> tuple[bool, str, List[Dict[str, Any]]]:
         """Synchronous wrapper for test_server_connection_async."""
