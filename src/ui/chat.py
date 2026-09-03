@@ -169,8 +169,22 @@ def render_chat_interface(mcp_manager: MCPManager):
             # Run async stream within Streamlit execution thread
             with st.spinner("Agent is reasoning..."):
                 from src.mcp_manager import _run_async
-                _run_async(process_stream())
-
+                try:
+                    _run_async(process_stream())
+                except Exception as e:
+                    err_msg = str(e)
+                    if "RateLimitError" in type(e).__name__ or "429" in err_msg or "quota" in err_msg.lower():
+                        st.error(
+                            "⚠️ **OpenAI Rate Limit / Quota Exceeded (429 Error)**\n\n"
+                            "This usually happens for one of two reasons:\n"
+                            "1. **Account has $0 balance**: OpenAI requires prepaid API credits. Check your balance at [OpenAI Billing](https://platform.openai.com/settings/organization/billing/overview).\n"
+                            "2. **Rate Limit on `gpt-4o`**: Try switching the model dropdown at the top to **`gpt-4o-mini`** which has much higher request limits."
+                        )
+                    elif "AuthenticationError" in type(e).__name__ or "401" in err_msg:
+                        st.error("❌ **Invalid OpenAI API Key**. Please verify the `OPENAI_API_KEY` in your `.env` or Streamlit Cloud Secrets.")
+                    else:
+                        st.error(f"❌ **Execution Error:** {err_msg}")
+                    return
 
             # Save assistant message to session history
             st.session_state["messages"].append({
@@ -178,3 +192,4 @@ def render_chat_interface(mcp_manager: MCPManager):
                 "content": final_content,
                 "tool_steps": tool_steps
             })
+
