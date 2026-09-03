@@ -5,6 +5,14 @@ def inject_custom_css():
     st.markdown(
         """
         <style>
+        /* Font & Layout Optimization */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        html, body, [class*="css"] {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            text-rendering: optimizeLegibility;
+        }
+
         /* Modern Header styling */
         .main-title {
             font-size: 2.2rem;
@@ -13,13 +21,16 @@ def inject_custom_css():
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.2rem;
+            min-height: 2.6rem;
         }
         
         .sub-title {
             color: #64748b;
             font-size: 1.05rem;
             margin-bottom: 1.5rem;
+            min-height: 1.5rem;
         }
+
 
         /* Server Card Badge */
         .badge-sse {

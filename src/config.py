@@ -15,12 +15,12 @@ AVAILABLE_MODELS = [
     "[Groq] openai/gpt-oss-120b",
     "[Groq] openai/gpt-oss-20b",
     "[Groq] qwen/qwen3.8-27b",
-    "[Groq] groq/compound",
     "[OpenAI] gpt-4o",
     "[OpenAI] gpt-4o-mini",
     "[OpenAI] gpt-4-turbo",
     "[OpenAI] o1-mini",
 ]
+
 
 
 def get_groq_api_key() -> Optional[str]:
