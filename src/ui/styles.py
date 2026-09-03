@@ -8,10 +8,16 @@ def inject_custom_css():
         /* Font & Layout Optimization */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
+        .stApp {
+            min-height: 100vh;
+        }
+
         html, body, [class*="css"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             text-rendering: optimizeLegibility;
+            font-display: swap;
         }
+
 
         /* Modern Header styling */
         .main-title {

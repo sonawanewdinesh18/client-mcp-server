@@ -58,81 +58,125 @@ def render_sidebar(mcp_manager: MCPManager) -> None:
             
             st.divider()
 
-        # Add New Server Accordion
-        with st.expander("➕ Add New MCP Server"):
-            transport_type = st.radio("Transport Type", ["SSE (Remote/URL)", "stdio (Local Command)"], horizontal=True)
-            
-            server_name = st.text_input("Server Name (unique identifier)", placeholder="e.g. weather_service")
-            
-            if "SSE" in transport_type:
-                sse_url = st.text_input("SSE URL", placeholder="https://api.example.com/sse or http://localhost:8000/sse")
-                headers_str = st.text_area("Optional Headers (JSON)", placeholder='{"Authorization": "Bearer ..."}')
-                
-                if st.button("Add SSE Server"):
-                    if not server_name or not sse_url:
-                        st.error("Server name and URL are required.")
-                    elif server_name in server_configs:
-                        st.error("A server with this name already exists.")
-                    else:
-                        headers_dict = {}
-                        if headers_str.strip():
-                            try:
-                                headers_dict = json.loads(headers_str)
-                            except Exception as e:
-                                st.error(f"Invalid headers JSON: {e}")
-                                return {
-                                    "api_key": active_key,
-                                    "model": selected_model,
-                                    "temperature": temperature
-                                }
-                        
-                        server_configs[server_name] = {
-                            "transport": "sse",
-                            "url": sse_url.strip(),
-                            "headers": headers_dict,
-                            "enabled": True
-                        }
-                        st.session_state["server_configs"] = server_configs
-                        mcp_manager.update_configs(server_configs)
-                        save_mcp_servers_config({"mcpServers": server_configs})
-                        st.success(f"Added server {server_name}!")
-                        st.rerun()
-            else:
-                cmd = st.text_input("Command", placeholder="e.g. uvx, python, node")
-                args_str = st.text_input("Arguments (space-separated)", placeholder="e.g. mcp-server-sqlite --db-path sample.db")
-                env_str = st.text_area("Optional Environment Variables (JSON)", placeholder='{"API_KEY": "..."}')
-                
-                if st.button("Add stdio Server"):
-                    if not server_name or not cmd:
-                        st.error("Server name and Command are required.")
-                    elif server_name in server_configs:
-                        st.error("A server with this name already exists.")
-                    else:
-                        env_dict = {}
-                        if env_str.strip():
-                            try:
-                                env_dict = json.loads(env_str)
-                            except Exception as e:
-                                st.error(f"Invalid env JSON: {e}")
-                                return {
-                                    "api_key": active_key,
-                                    "model": selected_model,
-                                    "temperature": temperature
-                                }
-                        
-                        args_list = args_str.split() if args_str.strip() else []
-                        server_configs[server_name] = {
-                            "transport": "stdio",
-                            "command": cmd.strip(),
-                            "args": args_list,
-                            "env": env_dict,
-                            "enabled": True
-                        }
-                        st.session_state["server_configs"] = server_configs
-                        mcp_manager.update_configs(server_configs)
-                        save_mcp_servers_config({"mcpServers": server_configs})
-                        st.success(f"Added stdio server {server_name}!")
-                        st.rerun()
+        # Add New Server Section
+        with st.expander("➕ Add New MCP Server", expanded=False):
+            tab_wizard, tab_json = st.tabs(["📝 Quick Form", "📋 Paste JSON (Claude Style)"])
+
+            with tab_wizard:
+                transport_type = st.radio(
+                    "Transport Type",
+                    ["🌐 Remote SSE (Cloud / URL)", "💻 Local stdio (uvx / Python)"],
+                    horizontal=False
+                )
+
+                if "Remote SSE" in transport_type:
+                    server_name = st.text_input("Server Name", placeholder="e.g. Expense-Tracker")
+                    sse_url = st.text_input("SSE URL", placeholder="https://your-server.fastmcp.app/mcp or /sse")
+                    auth_token = st.text_input(
+                        "API Key / Auth Token (Optional)",
+                        type="password",
+                        placeholder="Paste your FastMCP or Bearer token here (if protected)"
+                    )
+                    
+                    if st.button("➕ Connect Remote Server", use_container_width=True):
+                        if not server_name.strip() or not sse_url.strip():
+                            st.error("Please provide both Server Name and SSE URL.")
+                        else:
+                            clean_name = server_name.strip()
+                            headers = {}
+                            if auth_token.strip():
+                                token = auth_token.strip()
+                                if not token.lower().startswith("bearer "):
+                                    token = f"Bearer {token}"
+                                headers["Authorization"] = token
+
+                            server_configs[clean_name] = {
+                                "transport": "sse",
+                                "url": sse_url.strip(),
+                                "headers": headers,
+                                "enabled": True
+                            }
+                            st.session_state["server_configs"] = server_configs
+                            mcp_manager.update_configs(server_configs)
+                            save_mcp_servers_config({"mcpServers": server_configs})
+                            st.success(f"Added {clean_name}!")
+                            st.rerun()
+
+                else:
+                    preset = st.selectbox(
+                        "Preset Template",
+                        [
+                            "Custom Command",
+                            "SQLite Database (uvx mcp-server-sqlite)",
+                            "Local Python Script (python server.py)",
+                            "Node / NPX Server (npx -y ...)"
+                        ]
+                    )
+
+                    default_cmd = "uvx"
+                    default_args = ""
+                    if "SQLite" in preset:
+                        default_cmd = "uvx"
+                        default_args = "mcp-server-sqlite --db-path sample.db"
+                    elif "Python" in preset:
+                        default_cmd = "python"
+                        default_args = "server.py"
+                    elif "Node" in preset:
+                        default_cmd = "npx"
+                        default_args = "-y @modelcontextprotocol/server-filesystem ."
+
+                    server_name = st.text_input("Server Name", placeholder="e.g. local_sqlite")
+                    cmd = st.text_input("Command", value=default_cmd)
+                    args_str = st.text_input("Arguments", value=default_args)
+
+                    if st.button("➕ Connect Local Server", use_container_width=True):
+                        if not server_name.strip() or not cmd.strip():
+                            st.error("Please provide Server Name and Command.")
+                        else:
+                            clean_name = server_name.strip()
+                            args_list = args_str.split() if args_str.strip() else []
+                            server_configs[clean_name] = {
+                                "transport": "stdio",
+                                "command": cmd.strip(),
+                                "args": args_list,
+                                "env": {},
+                                "enabled": True
+                            }
+                            st.session_state["server_configs"] = server_configs
+                            mcp_manager.update_configs(server_configs)
+                            save_mcp_servers_config({"mcpServers": server_configs})
+                            st.success(f"Added {clean_name}!")
+                            st.rerun()
+
+            with tab_json:
+                st.caption("Paste your `claude_desktop_config.json` or `mcpServers` block directly:")
+                json_paste = st.text_area(
+                    "JSON Config",
+                    height=160,
+                    placeholder='{\n  "mcpServers": {\n    "my_server": {\n      "transport": "sse",\n      "url": "https://..."\n    }\n  }\n}'
+                )
+                if st.button("📥 Import JSON Config", use_container_width=True):
+                    if json_paste.strip():
+                        try:
+                            parsed = json.loads(json_paste.strip())
+                            servers_to_add = parsed.get("mcpServers", parsed)
+                            if isinstance(servers_to_add, dict):
+                                for s_name, s_cfg in servers_to_add.items():
+                                    if isinstance(s_cfg, dict):
+                                        if "transport" not in s_cfg:
+                                            s_cfg["transport"] = "sse" if "url" in s_cfg else "stdio"
+                                        s_cfg["enabled"] = s_cfg.get("enabled", True)
+                                        server_configs[s_name] = s_cfg
+                                st.session_state["server_configs"] = server_configs
+                                mcp_manager.update_configs(server_configs)
+                                save_mcp_servers_config({"mcpServers": server_configs})
+                                st.success("Imported configuration successfully!")
+                                st.rerun()
+                            else:
+                                st.error("JSON must contain an object mapping server names to configurations.")
+                        except Exception as e:
+                            st.error(f"Invalid JSON: {e}")
+
 
         # --- Discovered Tools Inspector ---
         st.markdown("---")
