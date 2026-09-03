@@ -1,9 +1,13 @@
 from typing import List, Dict, Any, Optional, AsyncIterator
 import warnings
 from langchain_openai import ChatOpenAI
-from langchain_groq import ChatGroq
 from langchain_core.messages import BaseMessage, AIMessage, ToolMessage
 from langchain_core.tools import BaseTool
+
+try:
+    from langchain_groq import ChatGroq
+except ImportError:
+    ChatGroq = None
 
 # Suppress LangGraph deprecation notice for create_react_agent
 with warnings.catch_warnings():
@@ -26,17 +30,27 @@ def create_mcp_agent(
     tools: Optional[List[BaseTool]] = None,
     system_prompt: Optional[str] = None,
 ) -> CompiledStateGraph:
-    """Creates a LangGraph ReAct agent bound with ChatGroq or ChatOpenAI and provided MCP tools."""
+    """Creates a LangGraph ReAct agent bound with Groq or OpenAI models."""
     clean_model = model_name.replace("[Groq] ", "").replace("[OpenAI] ", "").strip()
     is_groq = "[Groq]" in model_name or "llama" in model_name.lower() or "mixtral" in model_name.lower() or "gemma" in model_name.lower()
 
     if is_groq:
-        llm = ChatGroq(
-            model=clean_model,
-            temperature=temperature,
-            api_key=api_key,
-            streaming=True
-        )
+        if ChatGroq is not None:
+            llm = ChatGroq(
+                model=clean_model,
+                temperature=temperature,
+                api_key=api_key,
+                streaming=True
+            )
+        else:
+            # Fallback to OpenAI-compatible Groq endpoint
+            llm = ChatOpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                model=clean_model,
+                temperature=temperature,
+                api_key=api_key,
+                streaming=True
+            )
     else:
         llm = ChatOpenAI(
             model=clean_model,
@@ -44,6 +58,7 @@ def create_mcp_agent(
             api_key=api_key,
             streaming=True
         )
+
     
     prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
     tools_list = tools or []
