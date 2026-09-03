@@ -83,9 +83,11 @@ class MCPManager:
                     err_str = " | ".join(sub_errs)
                 
                 if "401" in err_str or "unauthorized" in err_str.lower():
-                    clean_err = f"'{name}': HTTP 401 Unauthorized (Server requires Authorization headers / API Token)"
+                    clean_err = f"'{name}': HTTP 401 Unauthorized (Requires Auth Token/Key)"
                 elif "404" in err_str:
-                    clean_err = f"'{name}': HTTP 404 Not Found (Check if the SSE URL path is correct, e.g. /sse or /mcp)"
+                    clean_err = f"'{name}': HTTP 404 Not Found (Check URL path)"
+                elif "FileNotFoundError" in err_str or "No such file" in err_str or "command not found" in err_str.lower() or "uvx" in err_str:
+                    clean_err = f"'{name}': Command '{config.get('command')}' not found (stdio servers only run locally, not on Streamlit Cloud)"
                 else:
                     clean_err = f"'{name}': {err_str}"
                 
@@ -94,9 +96,15 @@ class MCPManager:
         self._cached_tools = all_tools
 
         if errors and not all_tools:
-            raise RuntimeError("\n".join(errors))
+            # Format clean multiline error message
+            error_details = "\n• " + "\n• ".join(errors)
+            raise RuntimeError(
+                f"Could not connect to enabled servers:{error_details}\n\n"
+                "👉 Tip: Uncheck 'On' or 🗑️ delete servers you are not using, or enter required Auth Tokens."
+            )
 
         return all_tools
+
 
     def fetch_tools(self) -> List[BaseTool]:
         """Synchronous wrapper to fetch tools for Streamlit runtime."""
