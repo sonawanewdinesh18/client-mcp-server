@@ -34,6 +34,31 @@ class TestMCPClient(unittest.TestCase):
         self.assertIsNotNone(agent_groq)
 
 
+    def test_math_tools_execution(self):
+        from src.servers.math_server import calculate_expression, solve_equation, matrix_operations
+        import json
+        
+        calc_res = json.loads(calculate_expression("2**8 + 44"))
+        self.assertEqual(calc_res.get("simplified"), "300")
+        
+        eq_res = json.loads(solve_equation("x**2 - 9 = 0", "x"))
+        self.assertIn("-3", eq_res.get("solutions", []))
+        self.assertIn("3", eq_res.get("solutions", []))
+        
+        mat_res = json.loads(matrix_operations([[1, 2], [3, 4]], "determinant"))
+        self.assertEqual(mat_res.get("determinant"), -2.0)
+
+    def test_manim_tools_execution(self):
+        from src.servers.manim_server import generate_manim_animation_code, get_manim_template
+        import json
+        
+        gen_res = json.loads(generate_manim_animation_code("Calculus Limit", "Demonstrating limit as x approaches 0"))
+        self.assertEqual(gen_res.get("status"), "success")
+        self.assertIn("class CalculusLimitScene", gen_res.get("manim_code", ""))
+        
+        tmpl_res = json.loads(get_manim_template("calculus"))
+        self.assertIn("TangentLineScene", tmpl_res.get("template", ""))
+
     def test_mcp_manager_empty(self):
         manager = MCPManager({})
         self.assertIsNone(manager.client)
@@ -42,3 +67,4 @@ class TestMCPClient(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
