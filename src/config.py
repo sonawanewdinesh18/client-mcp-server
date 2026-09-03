@@ -12,15 +12,16 @@ ENV_PATH = BASE_DIR / ".env"
 SERVERS_CONFIG_PATH = BASE_DIR / "mcp_servers.json"
 
 AVAILABLE_MODELS = [
-    "[Groq] llama-3.3-70b-versatile",
-    "[Groq] llama-3.1-8b-instant",
-    "[Groq] mixtral-8x7b-32768",
+    "[Groq] openai/gpt-oss-120b",
+    "[Groq] openai/gpt-oss-20b",
+    "[Groq] qwen/qwen3.8-27b",
+    "[Groq] groq/compound",
     "[OpenAI] gpt-4o",
     "[OpenAI] gpt-4o-mini",
     "[OpenAI] gpt-4-turbo",
     "[OpenAI] o1-mini",
-    "[OpenAI] o3-mini",
 ]
+
 
 def get_groq_api_key() -> Optional[str]:
     """
