@@ -2,12 +2,18 @@
 Mathematics MCP Server (Built-in)
 Provides comprehensive symbolic & numerical mathematics tools powered by SymPy and Python math.
 """
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    from fastmcp import FastMCP
+
 import sympy as sp
 import math
 import json
 
 mcp = FastMCP("Mathematics-Server")
+
+
 
 
 @mcp.tool()

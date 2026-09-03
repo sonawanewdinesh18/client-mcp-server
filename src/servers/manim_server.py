@@ -2,10 +2,16 @@
 Manim MCP Server (Built-in)
 Provides tools for generating, structuring, and designing high-quality Manim mathematical animations and visual explanations.
 """
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    from fastmcp import FastMCP
+
 import json
 
 mcp = FastMCP("Manim-Animation-Server")
+
+
 
 
 @mcp.tool()

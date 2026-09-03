@@ -21,6 +21,56 @@ def _run_async(coro):
 
 
 
+import sys
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+def _normalize_connection_spec(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalizes connection spec for cross-platform and virtualenv execution."""
+    transport = config.get("transport", "sse").lower()
+    conn_spec = {"transport": transport}
+
+    if transport == "sse":
+        conn_spec["url"] = config.get("url", "")
+        if config.get("headers"):
+            conn_spec["headers"] = config.get("headers")
+    elif transport == "stdio":
+        raw_cmd = config.get("command", "").strip()
+        raw_args = config.get("args", [])
+        
+        # Resolve python / python3 to active sys.executable
+        if raw_cmd.lower() in ["python", "python3", "python.exe", "python3.exe"]:
+            cmd = sys.executable
+        else:
+            cmd = raw_cmd
+            
+        # Resolve any relative .py scripts to absolute path based on project root
+        args = []
+        for a in raw_args:
+            if isinstance(a, str) and (a.endswith(".py") or a.startswith("src/")):
+                candidate = (BASE_DIR / a).resolve()
+                if candidate.exists():
+                    args.append(str(candidate))
+                else:
+                    args.append(a)
+            else:
+                args.append(str(a))
+                
+        env = dict(os.environ)
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUNBUFFERED"] = "1"
+        if config.get("env") and isinstance(config.get("env"), dict):
+            env.update(config.get("env"))
+
+        conn_spec["command"] = cmd
+        conn_spec["args"] = args
+        conn_spec["env"] = env
+
+    return conn_spec
+
+
 class MCPManager:
     """Manages MCP Server connections and tool fetching using MultiServerMCPClient."""
 
@@ -35,21 +85,7 @@ class MCPManager:
         active_connections = {}
         for name, config in self.server_configs.items():
             if config.get("enabled", True):
-                conn_spec = {}
-                transport = config.get("transport", "sse").lower()
-                conn_spec["transport"] = transport
-
-                if transport == "sse":
-                    conn_spec["url"] = config.get("url", "")
-                    if config.get("headers"):
-                        conn_spec["headers"] = config.get("headers")
-                elif transport == "stdio":
-                    conn_spec["command"] = config.get("command", "")
-                    conn_spec["args"] = config.get("args", [])
-                    if config.get("env"):
-                        conn_spec["env"] = config.get("env")
-                
-                active_connections[name] = conn_spec
+                active_connections[name] = _normalize_connection_spec(config)
 
         if active_connections:
             self.client = MultiServerMCPClient(active_connections)
@@ -60,6 +96,7 @@ class MCPManager:
         """Updates the configuration and refreshes the client."""
         self.server_configs = server_configs
         self._refresh_client()
+
 
     async def fetch_tools_async(self) -> List[BaseTool]:
         """Fetch all tools from configured and enabled MCP servers asynchronously."""
@@ -115,28 +152,8 @@ class MCPManager:
         Tests connection to a single MCP server configuration.
         Returns: (success: bool, message: str, tools_list: list)
         """
-        transport = config.get("transport", "sse").lower()
-        test_conn = {"transport": transport}
-
-        if transport == "sse":
-            url = config.get("url", "").strip()
-            if not url:
-                return False, "URL cannot be empty for SSE transport.", []
-            test_conn["url"] = url
-            if config.get("headers"):
-                test_conn["headers"] = config.get("headers")
-        elif transport == "stdio":
-            cmd = config.get("command", "").strip()
-            if not cmd:
-                return False, "Command cannot be empty for stdio transport.", []
-            test_conn["command"] = cmd
-            test_conn["args"] = config.get("args", [])
-            if config.get("env"):
-                test_conn["env"] = config.get("env")
-        else:
-            return False, f"Unsupported transport type: {transport}", []
-
         try:
+            test_conn = _normalize_connection_spec(config)
             test_client = MultiServerMCPClient({name: test_conn})
             tools = await test_client.get_tools(server_name=name)
             tool_meta = []
@@ -164,6 +181,7 @@ class MCPManager:
             elif "404" in err_str:
                 return False, "HTTP 404 Not Found: Check if URL path is correct (e.g., /sse or /mcp).", []
             return False, f"Connection error: {err_str}", []
+
 
 
     def test_server_connection(self, name: str, config: Dict[str, Any]) -> tuple[bool, str, List[Dict[str, Any]]]:
