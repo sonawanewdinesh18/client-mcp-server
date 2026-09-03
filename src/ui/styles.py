@@ -81,6 +81,19 @@ def inject_custom_css():
             font-weight: 600;
         }
 
+        /* Performance & Layout Stability Optimization */
+        .stButton > button, button[kind="primary"], button[kind="secondary"] {
+            contain: layout style;
+            min-height: 38px;
+            transition: all 0.15s ease-in-out;
+        }
+
+        /* Expander & Card Stabilization */
+        [data-testid="stExpander"] {
+            contain: layout;
+            border-radius: 8px;
+        }
+
         /* Tool invocation display */
         .tool-call-box {
             border-left: 3px solid #3b82f6;
@@ -88,6 +101,7 @@ def inject_custom_css():
             margin: 6px 0;
             background: rgba(59, 130, 246, 0.05);
             border-radius: 0 8px 8px 0;
+            contain: content;
         }
 
         /* Tool item chip in sidebar */
@@ -98,6 +112,7 @@ def inject_custom_css():
             padding: 6px 10px;
             margin-bottom: 6px;
             font-size: 0.85rem;
+            contain: content;
         }
 
         .tool-name {
@@ -105,6 +120,7 @@ def inject_custom_css():
             color: #38bdf8;
         }
         </style>
+
         """,
         unsafe_allow_html=True
     )
