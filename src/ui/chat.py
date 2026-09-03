@@ -35,12 +35,14 @@ def render_tool_step(step: Dict[str, Any]):
 
 
 def render_chat_interface(mcp_manager: MCPManager):
-    """Renders the main chat window with ChatGPT/Claude style top model picker."""
+    """Renders the main chat window with ChatGPT/Claude style top model picker and sample prompts."""
     
     # Top Header Bar (ChatGPT / Claude Style)
-    col_title, col_model, col_clear = st.columns([5, 2, 1])
+    col_title, col_guide, col_model, col_clear = st.columns([4, 2, 2, 1])
     with col_title:
         st.markdown('<div class="main-title">🤖 MCP Assistant</div>', unsafe_allow_html=True)
+    with col_guide:
+        show_guide = st.button("💡 How to Use MCP", help="View MCP guide & sample prompts", use_container_width=True)
     with col_model:
         selected_model = st.selectbox(
             "Model Selection",
@@ -54,7 +56,47 @@ def render_chat_interface(mcp_manager: MCPManager):
             st.session_state["messages"] = []
             st.rerun()
 
-    st.markdown('<div class="sub-title">Connected to Model Context Protocol (MCP) servers</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Connected to Model Context Protocol (MCP) servers • Built-in Mathematics & Manim</div>', unsafe_allow_html=True)
+
+    # Quick Guide & Sample Prompts Modal / Expander
+    if show_guide or st.session_state.get("show_guide_expanded", False):
+        with st.expander("📖 **How to Use MCP & Sample Prompts**", expanded=True):
+            st.markdown(
+                """
+                ### 🌟 What is Model Context Protocol (MCP)?
+                **MCP** connects AI models to external tools and live databases. When you send a prompt:
+                1. The AI decides which tool to invoke.
+                2. It calls your MCP server in real-time.
+                3. It returns the exact computed output with interactive visualizations.
+                """
+            )
+
+            st.markdown("#### 🎯 Click any Sample Prompt to Try:")
+            col_math, col_manim = st.columns(2)
+
+            with col_math:
+                st.markdown("**🧮 Mathematics Server Prompts:**")
+                if st.button("▶️ Solve equation: `x^3 - 6x^2 + 11x - 6 = 0`", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Solve the polynomial equation x**3 - 6*x**2 + 11*x - 6 = 0 step by step."
+                    st.rerun()
+                if st.button("▶️ Find derivative of `x^2 * sin(x)`", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Find the derivative of x**2 * sin(x) with respect to x."
+                    st.rerun()
+                if st.button("▶️ Eigenvalues & Determinant of `[[4, 2], [1, 3]]`", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Calculate the determinant and eigenvalues of the matrix [[4, 2], [1, 3]]."
+                    st.rerun()
+
+            with col_manim:
+                st.markdown("**🎬 Manim Math Animation Prompts:**")
+                if st.button("▶️ Animate Pythagorean Theorem Proof", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Generate a Manim scene animation code proving the Pythagorean theorem visually."
+                    st.rerun()
+                if st.button("▶️ Animate Tangent Line Slope in Calculus", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Create a Manim Community animation code illustrating the tangent line to y = x^2 as x moves from 0 to 3."
+                    st.rerun()
+                if st.button("▶️ Manim 2D Vector Transformation", use_container_width=True):
+                    st.session_state["queued_prompt"] = "Generate a Manim LinearTransformationScene code animating matrix [[2, 1], [1, 2]]."
+                    st.rerun()
 
     # Initialize messages list
     if "messages" not in st.session_state:
@@ -72,10 +114,13 @@ def render_chat_interface(mcp_manager: MCPManager):
             if msg.get("content"):
                 st.markdown(msg["content"])
 
-    # User chat input
+    # Check for queued sample prompt or standard chat input
     user_prompt = st.chat_input("Ask a question or request a task using your MCP tools...")
+    if not user_prompt and st.session_state.get("queued_prompt"):
+        user_prompt = st.session_state.pop("queued_prompt")
 
     if user_prompt:
+
         is_groq = "[Groq]" in selected_model
         
         # Check corresponding API Key from .env / environment
